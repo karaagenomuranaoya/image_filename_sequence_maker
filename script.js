@@ -112,7 +112,7 @@ function generateList() {
   const width = Math.max(3, inferIndexWidth(count)); // 基本は001形式
   currentLines = Array.from({ length: count }, (_, i) => {
     const n = i + 1;
-    return `${ymd}_${pad(n, width)}.${ext}`;
+    return `${ymd}_${pad(n, width)}`;
   });
 
   renderLines(currentLines);
