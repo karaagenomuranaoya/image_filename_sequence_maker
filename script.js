@@ -1,9 +1,10 @@
 // script.js
 lucide.createIcons();
 
+// Elements
 const dateInput = document.getElementById("date-input");
 const countInput = document.getElementById("count-input");
-const extInput = document.getElementById("ext-input");
+// extInput 削除
 
 const genBtn = document.getElementById("gen-btn");
 const todayBtn = document.getElementById("today-btn");
@@ -12,155 +13,159 @@ const clearBtn = document.getElementById("clear-btn");
 const copyBtn = document.getElementById("copy-btn");
 const downloadBtn = document.getElementById("download-btn");
 
-const resultCard = document.getElementById("result-card");
-const resultList = document.getElementById("result-list"); // <pre>
-const hint = document.getElementById("hint");
-const lineCopyIndicator = document.getElementById("line-copy-indicator");
+const resultList = document.getElementById("result-list");
+const listInfo = document.getElementById("list-info");
+const hintText = document.getElementById("hint-text");
+const emptyState = document.getElementById("empty-state");
 
-let currentLines = []; // 生成した行を保持
+let currentLines = [];
 
-// ===== helpers =====
+// ===== Helpers =====
 function pad(num, width) {
   const s = String(num);
   return s.length >= width ? s : "0".repeat(width - s.length) + s;
 }
 
 function yyyymmddFromDateValue(dateValue) {
-  // dateValue: "YYYY-MM-DD"
   if (!dateValue) return "";
   const [y, m, d] = dateValue.split("-");
-  if (!y || !m || !d) return "";
-  return `${y}${m}${d}`;
+  return (y && m && d) ? `${y}${m}${d}` : "";
 }
 
-function inferIndexWidth(count) {
-  // 1..9 => 1, 1..99 => 2, 1..999 => 3, 1..9999 => 4
-  const n = Math.max(1, Math.min(9999, Number(count) || 1));
-  return String(n).length;
+function showHint(msg, isError = false) {
+  hintText.textContent = msg;
+  hintText.className = `text-[11px] text-right h-4 pr-1 transition-opacity duration-300 ${isError ? 'text-red-400 font-bold' : 'text-slate-400'}`;
+  hintText.style.opacity = '1';
+  
+  if (hintText.timeout) clearTimeout(hintText.timeout);
+  hintText.timeout = setTimeout(() => {
+    hintText.style.opacity = '0';
+  }, 3000);
 }
 
-function emphasizeResult() {
-  resultCard.classList.add("border-blue-300", "bg-blue-50/30");
-  setTimeout(() => {
-    resultCard.classList.remove("border-blue-300", "bg-blue-50/30");
-  }, 250);
-}
-
-function setHint(text) {
-  hint.textContent = text || "";
-}
-
-function setLineIndicator(text) {
-  lineCopyIndicator.textContent = text || "";
-}
-
-// 100行程度なら span 100個は全然OK。
-// イベントは親に1つだけ（委任）なので軽いです。
+// ===== Rendering =====
 function renderLines(lines) {
+  currentLines = lines;
+  resultList.innerHTML = "";
+
   if (!lines.length) {
-    resultList.innerHTML = "";
-    return;
-  }
-  resultList.innerHTML = lines
-    .map((line, idx) => {
-      // hover で視認、クリック対象を明確にする
-      return `
-        <span
-          data-idx="${idx}"
-          class="block px-2 py-1 rounded-lg hover:bg-slate-100 cursor-pointer transition-colors"
-          title="クリックでこの1行をコピー"
-        >${escapeHtml(line)}</span>
-      `;
-    })
-    .join("");
-}
-
-function escapeHtml(str) {
-  return String(str)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function clampCount(v) {
-  let count = Number(v);
-  if (!Number.isFinite(count)) count = 100;
-  count = Math.floor(count);
-  count = Math.max(1, Math.min(9999, count));
-  return count;
-}
-
-// ===== main =====
-function generateList() {
-  const ymd = yyyymmddFromDateValue(dateInput.value);
-
-  const count = clampCount(countInput.value);
-  countInput.value = String(count);
-
-  const ext = (extInput.value || "png").replace(".", "").toLowerCase();
-
-  if (!ymd) {
-    currentLines = [];
-    renderLines(currentLines);
-    setHint("まず日付を入力してください。");
-    setLineIndicator("");
+    emptyState.classList.remove("hidden");
+    listInfo.textContent = "";
     return;
   }
 
-  const width = Math.max(3, inferIndexWidth(count)); // 基本は001形式
-  currentLines = Array.from({ length: count }, (_, i) => {
-    const n = i + 1;
-    return `${ymd}_${pad(n, width)}`;
+  emptyState.classList.add("hidden");
+  listInfo.textContent = `${lines.length} items`;
+
+  const fragment = document.createDocumentFragment();
+
+  lines.forEach((line, idx) => {
+    const div = document.createElement("div");
+    div.className = "group flex items-center justify-between px-3 py-0.5 rounded-lg hover:bg-white hover:shadow-sm hover:ring-1 hover:ring-slate-100 cursor-pointer transition-all select-none";
+    div.dataset.idx = idx;
+    
+    div.innerHTML = `
+      <span class="font-mono text-[13px] text-slate-600 group-hover:text-slate-900 transition-colors truncate">${line}</span>
+      <div class="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-200 transform translate-x-2 group-hover:translate-x-0">
+         <span class="text-[10px] font-bold text-slate-300 uppercase tracking-wider status-text">Copy</span>
+         <i data-lucide="copy" class="w-3.5 h-3.5 text-slate-400 icon-target"></i>
+      </div>
+    `;
+
+    div.addEventListener("click", () => handleLineClick(line, div));
+    fragment.appendChild(div);
   });
 
-  renderLines(currentLines);
-  setHint(`生成：${count}件（行クリックで1行コピー / ボタンで全文コピー）`);
-  setLineIndicator("");
-  emphasizeResult();
+  resultList.appendChild(fragment);
+  lucide.createIcons();
+}
+
+// ===== Core Logic =====
+function generateList() {
+  const ymd = yyyymmddFromDateValue(dateInput.value);
+  let count = Number(countInput.value);
+  
+  if (!Number.isFinite(count) || count < 1) count = 100;
+  if (count > 9999) count = 9999;
+  
+  const width = Math.max(3, String(count).length);
+
+  if (!ymd) {
+    renderLines([]);
+    return;
+  }
+
+  // 拡張子なしで生成
+  const newLines = Array.from({ length: count }, (_, i) => {
+    return `${ymd}_${pad(i + 1, width)}`; 
+  });
+
+  renderLines(newLines);
+  
+  resultList.animate([
+    { opacity: 0.5, transform: 'translateY(5px)' },
+    { opacity: 1, transform: 'translateY(0)' }
+  ], { duration: 250, easing: 'ease-out' });
+}
+
+// ===== Actions =====
+async function handleLineClick(text, element) {
+  try {
+    await navigator.clipboard.writeText(text);
+    
+    const icon = element.querySelector(".icon-target");
+    
+    element.classList.add("bg-blue-50/80", "ring-1", "ring-blue-100");
+    
+    if(icon) {
+      icon.innerHTML = '<polyline points="20 6 9 17 4 12"></polyline>'; 
+      icon.parentElement.innerHTML = '<span class="text-[10px] font-bold text-blue-500 uppercase tracking-wider">Copied!</span><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="text-blue-500"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+    }
+
+    setTimeout(() => {
+        element.classList.remove("bg-blue-50/80", "ring-1", "ring-blue-100");
+        const statusDiv = element.querySelector("div");
+        if(statusDiv) {
+            statusDiv.innerHTML = `
+                <span class="text-[10px] font-bold text-slate-300 uppercase tracking-wider status-text">Copy</span>
+                <i data-lucide="copy" class="w-3.5 h-3.5 text-slate-400 icon-target"></i>
+            `;
+            lucide.createIcons();
+        }
+    }, 1000);
+
+  } catch (err) {
+    console.error("Copy failed", err);
+    showHint("コピーに失敗しました", true);
+  }
 }
 
 async function copyAll() {
-  if (!currentLines.length) return;
-
+  if (!currentLines.length) {
+    showHint("コピーする内容がありません", true);
+    return;
+  }
+  
   try {
     await navigator.clipboard.writeText(currentLines.join("\n"));
-    const original = copyBtn.innerHTML;
-    copyBtn.innerHTML = '<i data-lucide="check" class="text-green-400"></i> コピーしました！';
+    
+    const originalContent = copyBtn.innerHTML;
+    copyBtn.innerHTML = `<i data-lucide="check" class="w-4 h-4"></i><span>Copied!</span>`;
+    copyBtn.classList.remove("bg-blue-600", "hover:bg-blue-700");
+    copyBtn.classList.add("bg-emerald-500", "hover:bg-emerald-600");
     lucide.createIcons();
+    
+    showHint("クリップボードにコピーしました！");
+
     setTimeout(() => {
-      copyBtn.innerHTML = original;
+      copyBtn.innerHTML = originalContent;
+      copyBtn.classList.add("bg-blue-600", "hover:bg-blue-700");
+      copyBtn.classList.remove("bg-emerald-500", "hover:bg-emerald-600");
       lucide.createIcons();
-    }, 1300);
-  } catch (e) {
-    console.error("Copy failed", e);
-  }
-}
+    }, 2000);
 
-async function copyOneLine(text, el) {
-  try {
-    await navigator.clipboard.writeText(text);
-
-    // 行の視覚フィードバック（ミスった？を減らす）
-    el.classList.add("line-flash");
-    setLineIndicator("コピーしました ✅");
-    setTimeout(() => {
-      el.classList.remove("line-flash");
-      setLineIndicator("");
-    }, 450);
-  } catch (e) {
-    console.error("Copy failed", e);
-  }
-}
-
-function clearAll() {
-  if ((dateInput.value || currentLines.length) && confirm("内容をクリアしますか？")) {
-    dateInput.value = "";
-    currentLines = [];
-    renderLines(currentLines);
-    setHint("");
-    setLineIndicator("");
+  } catch (err) {
+    showHint("エラーが発生しました", true);
   }
 }
 
@@ -171,58 +176,49 @@ function setToday() {
   const d = pad(now.getDate(), 2);
   dateInput.value = `${y}-${m}-${d}`;
   generateList();
+  showHint("今日の日付をセットしました");
+}
+
+function clearAll() {
+  dateInput.value = "";
+  countInput.value = "100";
+  renderLines([]);
+  showHint("リセットしました");
 }
 
 function downloadTxt() {
   if (!currentLines.length) return;
-
+  
   const ymd = yyyymmddFromDateValue(dateInput.value) || "sequence";
-  const text = currentLines.join("\n");
-
-  const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+  const blob = new Blob([currentLines.join("\n")], { type: "text/plain" });
   const url = URL.createObjectURL(blob);
-
+  
   const a = document.createElement("a");
   a.href = url;
-  a.download = `${ymd}_filenames.txt`;
+  a.download = `${ymd}_list.txt`;
   document.body.appendChild(a);
   a.click();
-  a.remove();
-
+  document.body.removeChild(a);
   URL.revokeObjectURL(url);
-
-  const original = downloadBtn.innerHTML;
-  downloadBtn.innerHTML = '<i data-lucide="check" class="text-green-400"></i> 作成しました';
-  lucide.createIcons();
-  setTimeout(() => {
-    downloadBtn.innerHTML = original;
-    lucide.createIcons();
-  }, 1200);
+  
+  showHint("ファイルをダウンロードしました");
 }
 
-// ===== events =====
-genBtn.addEventListener("click", generateList);
+// ===== Events =====
+genBtn.addEventListener("click", () => {
+    generateList();
+    if(currentLines.length) showHint("生成完了！");
+});
 todayBtn.addEventListener("click", setToday);
 clearBtn.addEventListener("click", clearAll);
 copyBtn.addEventListener("click", copyAll);
 downloadBtn.addEventListener("click", downloadTxt);
 
-// 親にだけイベントを付ける（軽い＆ミスりにくい）
-resultList.addEventListener("click", (e) => {
-  const target = e.target.closest("[data-idx]");
-  if (!target) return;
-
-  const idx = Number(target.dataset.idx);
-  const line = currentLines[idx];
-  if (!line) return;
-
-  copyOneLine(line, target);
-});
-
-// オート生成（邪魔なら消してOK）
+// Realtime updates
 dateInput.addEventListener("input", generateList);
 countInput.addEventListener("input", generateList);
-extInput.addEventListener("change", generateList);
+// extInput 関連イベント削除
 
-// 初期メッセージ
-setHint("日付を入れると連番が出ます。行クリックで1行コピーできます。");
+// Init
+lucide.createIcons();
+renderLines([]);

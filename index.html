@@ -5,8 +5,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <title>連番ジェネレーター｜ 画像ファイル名を爆速生成</title>
-    <meta name="description" content="日付を入力するだけで YYYYMMDD_001.png 形式の連番を一括生成。ログイン不要のミニマルツール。" />
+    <title>連番ジェネレーター｜ シンプル版</title>
+    <meta name="description" content="日付を入力するだけで YYYYMMDD_001 形式の連番テキストを一括生成。" />
 
     <link rel="icon" type="image/png" href="images/favicon.png" />
 
@@ -14,16 +14,30 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
-        textarea,
-        input,
-        select {
-            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        /* カスタムスクロールバー */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1;
+            border-radius: 20px;
+            border: 3px solid transparent;
+            background-clip: content-box;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background-color: #94a3b8;
         }
 
         @keyframes fadeIn {
             from {
                 opacity: 0;
-                transform: translateY(10px);
+                transform: translateY(4px);
             }
 
             to {
@@ -32,192 +46,135 @@
             }
         }
 
-        .animate-in {
+        .animate-fade-in {
             animation: fadeIn 0.3s ease-out forwards;
         }
-
-        .result-area {
-            background-color: #f8fafc;
-            /* slate-50 */
-        }
-
-        /* 行のフィードバック用（JSでも付け外しするけど念のため） */
-        .line-flash {
-            background: rgba(16, 185, 129, 0.08);
-            /* emerald */
-            box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.20);
-        }
     </style>
-
-    <meta name="google-site-verification" content="GuEQO4WrWAdbrhzwdTWeoU2eJD0Y9CkFLsVd7JGeRKM" />
 </head>
 
-<body class="bg-slate-50 min-h-screen p-4 md:p-8 font-sans text-slate-900 selection:bg-blue-100">
-    <div id="app" class="max-w-2xl mx-auto">
-        <header class="mb-10 text-center">
+<body
+    class="bg-slate-50 min-h-screen p-4 md:p-8 font-sans text-slate-800 antialiased selection:bg-blue-100 selection:text-blue-900">
+    <div id="app" class="max-w-2xl mx-auto pb-20">
+
+        <header class="mb-8 text-center pt-4">
             <a href="#" class="inline-flex flex-col items-center group">
+                <div
+                    class="flex items-center justify-center bg-white p-3 rounded-2xl shadow-sm border border-slate-100 mb-4 group-hover:-translate-y-1 transition-transform duration-300">
+                    <i data-lucide="zap" class="text-yellow-500 fill-yellow-500 w-6 h-6"></i>
+                </div>
                 <h1
-                    class="text-3xl font-extrabold text-slate-800 flex items-center gap-3 group-hover:text-blue-600 transition-colors">
-                    <i data-lucide="zap" class="text-yellow-500 fill-yellow-500"></i>
+                    class="text-2xl font-extrabold text-slate-800 tracking-tight group-hover:text-blue-600 transition-colors">
                     連番ジェネレーター
                 </h1>
-                <p class="mt-2 text-slate-400 text-sm font-medium tracking-wide">
-                    IMAGE FILENAME SEQUENCE MAKER
+                <p class="mt-1 text-slate-400 text-xs font-medium tracking-widest uppercase">
+                    Sequence Generator
                 </p>
             </a>
-            <p class="mt-6 text-slate-600 text-sm leading-relaxed">
-                日付を入れるだけで、<span class="font-semibold">YYYYMMDD_001.png</span>形式の連番を自動生成します。<br
-                    class="hidden md:block" />
-                データはサーバーへ送信されず、ブラウザ上で安全に処理されます。
+            <p class="mt-4 text-slate-500 text-sm leading-relaxed max-w-md mx-auto">
+                日付指定で <span class="font-mono text-blue-600 bg-blue-50 px-1 py-0.5 rounded">YYYYMMDD_001</span>
+                形式の文字列を生成。<br>
             </p>
         </header>
 
-        <div class="animate-in space-y-6">
+        <div class="animate-fade-in space-y-6">
 
-            <!-- Settings -->
-            <div class="space-y-2">
-                <label class="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Settings</label>
-
-                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-5 space-y-4
-                    focus-within:border-blue-300 focus-within:shadow-md transition-all">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <div class="md:col-span-1">
+            <div
+                class="bg-white rounded-2xl shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)] border border-slate-100 overflow-hidden">
+                <div class="p-5 md:p-6 space-y-5">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="space-y-1.5">
                             <label for="date-input"
-                                class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">
-                                Date
-                            </label>
-                            <input id="date-input" type="date" class="w-full rounded-xl border border-slate-200 bg-transparent px-3 py-3 text-slate-700
-                       focus:outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100" />
-                            <p class="mt-2 text-[11px] text-slate-400">
-                                入力すると自動生成します
-                            </p>
+                                class="text-[11px] font-bold text-slate-400 uppercase tracking-wider pl-1">Date</label>
+                            <div class="relative group">
+                                <input id="date-input" type="date"
+                                    class="w-full bg-slate-50 text-slate-700 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium outline-none transition-all focus:bg-white focus:border-blue-400 focus:ring-4 focus:ring-blue-50/50 hover:border-slate-300 cursor-pointer" />
+                            </div>
                         </div>
 
-                        <div class="md:col-span-1">
+                        <div class="space-y-1.5">
                             <label for="count-input"
-                                class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">
-                                Count
-                            </label>
-                            <input id="count-input" type="number" min="1" max="9999" value="100" class="w-full rounded-xl border border-slate-200 bg-transparent px-3 py-3 text-slate-700
-                       focus:outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100" />
-                            <p class="mt-2 text-[11px] text-slate-400">
-                                例：100（最大 9999）
-                            </p>
-                        </div>
-
-                        <div class="md:col-span-1">
-                            <label for="ext-input"
-                                class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">
-                                Extension
-                            </label>
-                            <select id="ext-input" class="w-full rounded-xl border border-slate-200 bg-transparent px-3 py-3 text-slate-700
-                       focus:outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100">
-                                <option value="png" selected>.png</option>
-                                <option value="jpg">.jpg</option>
-                                <option value="webp">.webp</option>
-                            </select>
-                            <p class="mt-2 text-[11px] text-slate-400">
-                                好きな拡張子で
-                            </p>
+                                class="text-[11px] font-bold text-slate-400 uppercase tracking-wider pl-1">Count</label>
+                            <div class="relative">
+                                <input id="count-input" type="number" min="1" max="9999" value="100" placeholder="100"
+                                    class="w-full bg-slate-50 text-slate-700 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium outline-none transition-all focus:bg-white focus:border-blue-400 focus:ring-4 focus:ring-blue-50/50 hover:border-slate-300" />
+                                <span
+                                    class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">個</span>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="flex flex-wrap gap-2 pt-1">
+                    <div class="flex flex-col sm:flex-row items-stretch gap-2 pt-2">
                         <button id="gen-btn"
-                            class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl
-                     shadow-lg shadow-blue-100 flex items-center justify-center gap-2 transition-all active:scale-95 text-sm">
-                            <i data-lucide="sparkles" size="18"></i> 生成する
+                            class="flex-[2] bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-slate-200/50 flex items-center justify-center gap-2 transition-all active:scale-[0.98]">
+                            <i data-lucide="sparkles" class="w-4 h-4"></i>
+                            <span>Generate</span>
                         </button>
 
                         <button id="today-btn"
-                            class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-xl
-                     shadow-lg shadow-indigo-100 flex items-center justify-center gap-2 transition-all active:scale-95 text-sm">
-                            <i data-lucide="calendar" size="18"></i> 今日
+                            class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-blue-100 flex items-center justify-center gap-2 transition-all active:scale-[0.98]">
+                            <i data-lucide="calendar" class="w-4 h-4"></i>
+                            <span>Today</span>
                         </button>
 
-                        <button id="clear-btn" class="flex-1 bg-white hover:bg-slate-50 text-slate-400 font-semibold py-3 px-4 border border-slate-200 rounded-xl
-                     flex items-center justify-center gap-2 transition-all active:scale-95 text-sm">
-                            <i data-lucide="trash-2" size="18"></i> クリア
+                        <button id="clear-btn"
+                            class="flex-none sm:w-14 bg-white text-slate-400 font-semibold border border-slate-200 rounded-xl hover:bg-red-50 hover:text-red-500 hover:border-red-100 transition-colors active:scale-[0.98] flex items-center justify-center"
+                            title="リセット">
+                            <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
                         </button>
-                    </div>
-
-                    <div class="text-[11px] text-slate-400 leading-relaxed">
-                        出力形式：<span class="font-mono text-slate-600">YYYYMMDD_001.ext</span>（連番はゼロ埋め）
                     </div>
                 </div>
             </div>
 
-            <!-- Result -->
             <div class="space-y-2">
-                <label class="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Result</label>
+                <div class="flex justify-between items-end px-1">
+                    <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Result</label>
+                    <span id="list-info" class="text-[10px] text-slate-400 font-mono"></span>
+                </div>
 
                 <div id="result-card"
-                    class="result-area rounded-2xl border border-dashed border-slate-300 p-4 transition-all">
-                    <!-- クリックで1行コピー -->
-                    <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-                        <p class="text-[11px] text-slate-400">
-                            <span class="font-semibold text-slate-500">使い方：</span>
-                            行をクリック → その1行をコピー
-                        </p>
-                        <span id="line-copy-indicator" class="text-[11px] text-slate-400"></span>
+                    class="relative bg-white rounded-2xl border border-slate-200 shadow-sm transition-all duration-300 overflow-hidden group hover:border-blue-300/50">
+
+                    <div id="empty-state"
+                        class="hidden absolute inset-0 flex flex-col items-center justify-center text-slate-300 pointer-events-none">
+                        <i data-lucide="list" class="w-8 h-8 mb-2 opacity-50"></i>
+                        <span class="text-xs">リストはここに表示されます</span>
                     </div>
 
-                    <pre id="result-list" class="w-full min-h-[220px] whitespace-pre-wrap break-words bg-transparent
-                 text-slate-600 leading-relaxed font-mono text-[12px] select-text"></pre>
+                    <div id="result-scroll-area" class="h-[300px] overflow-y-auto custom-scrollbar p-2 bg-slate-50/50">
+                        <div id="result-list" class="space-y-0.5"></div>
+                    </div>
                 </div>
 
-                <p id="hint" class="text-[11px] text-slate-400 ml-1"></p>
+                <p id="hint-text" class="text-[11px] text-slate-400 text-right h-4 pr-1 transition-opacity opacity-0">
+                </p>
             </div>
 
-            <!-- Actions -->
-            <div class="flex gap-2">
-                <button id="copy-btn" class="flex-[2] bg-slate-800 hover:bg-slate-900 text-white font-semibold py-4 px-6 rounded-2xl shadow-lg
-                 flex items-center justify-center gap-2 transition-all active:scale-95">
-                    <i data-lucide="copy" size="20"></i> まとめてコピー
+            <div class="grid grid-cols-2 gap-3">
+                <button id="copy-btn"
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-blue-200/50 flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] group">
+                    <i data-lucide="copy" class="w-4 h-4 group-hover:scale-110 transition-transform"></i>
+                    <span>Copy All</span>
                 </button>
 
-                <button id="download-btn" class="flex-1 bg-white hover:bg-slate-50 text-slate-400 font-semibold py-4 px-6 border border-slate-200 rounded-2xl
-                 flex items-center justify-center gap-2 transition-all active:scale-95 text-sm">
-                    <i data-lucide="download" size="18"></i> TXT
+                <button id="download-btn"
+                    class="bg-white hover:bg-slate-50 text-slate-600 font-semibold py-3.5 px-4 border border-slate-200 rounded-xl shadow-sm flex items-center justify-center gap-2.5 transition-all active:scale-[0.98]">
+                    <i data-lucide="download" class="w-4 h-4 text-slate-400"></i>
+                    <span>Download .txt</span>
                 </button>
             </div>
+
         </div>
 
-        <!-- Footer: 参考の雰囲気を踏襲 -->
-        <footer class="mt-24 border-t border-slate-200 pt-12 pb-16 text-slate-500 text-[11px] leading-relaxed">
-            <div class="flex flex-col items-center mb-12">
-                <a href="#" class="group flex flex-col items-center transition-transform hover:-translate-y-1">
-                    <div class="flex items-center gap-3 mb-4">
-                        <img src="images/favicon.png" alt="NomuTools Logo"
-                            class="w-8 h-8 rounded-lg shadow-sm grayscale group-hover:grayscale-0 transition-all duration-500" />
-                        <div class="text-left">
-                            <span
-                                class="block text-slate-800 font-bold text-sm tracking-tighter group-hover:text-blue-600 transition-colors">NomuTools</span>
-                            <span class="block text-slate-400 text-[10px]">Simple & Lightweight Utilities.</span>
-                        </div>
-                    </div>
-                    <p class="text-center max-w-sm opacity-70 group-hover:opacity-100 transition-opacity">
-                        「削ぎ落とした、最高の使い心地を」<br />
-                        NomuToolsは、日々のデジタル作業をほんの少し速くする、ミニマルなツール群を展開しています。
-                    </p>
-                </a>
+        <footer class="mt-20 border-t border-slate-100 pt-10 text-center">
+            <div
+                class="inline-flex items-center gap-2 opacity-50 hover:opacity-100 transition-opacity duration-500 cursor-default">
+                <img src="images/favicon.png" alt="Logo" class="w-5 h-5 grayscale rounded-md" />
+                <span class="text-xs font-bold text-slate-600 tracking-tight">NomuTools</span>
             </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-left border-t border-slate-100 pt-8">
-                <div>
-                    <h2 class="font-bold text-slate-700 mb-2 italic tracking-wider">Security</h2>
-                    <p class="text-red-400 font-bold mb-2">個人情報や暗証番号は絶対に入力しないでください。</p>
-                    <p>データはブラウザ内でのみ処理され、サーバーへ送信されることはありません。管理は自己責任でお願いいたします。</p>
-                </div>
-                <div>
-                    <h2 class="font-bold text-slate-700 mb-2 italic tracking-wider">Support</h2>
-                    <p>生成結果の正確性については細心の注意を払っておりますが、本ツールの利用により生じた損害について、開発者は一切の責任を負いません。</p>
-                </div>
-            </div>
-
-            <div class="mt-12 text-center opacity-30 tracking-widest uppercase font-light">
-                &copy; 2025 NomuTools
-            </div>
+            <p class="mt-4 text-[10px] text-slate-400">
+                Processed securely in your browser. No data is sent to server.
+            </p>
+            <p class="text-[10px] text-slate-300 mt-1">&copy; 2025 NomuTools</p>
         </footer>
     </div>
 
